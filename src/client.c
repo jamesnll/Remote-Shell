@@ -1,9 +1,8 @@
-#include "../include/display.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 int main(void)
 {
-    display("Hello, World");
-
+    printf("Hello world\n");
     return EXIT_SUCCESS;
 }
