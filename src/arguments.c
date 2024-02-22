@@ -22,12 +22,12 @@ p101_fsm_state_t parse_arguments(const struct p101_env *env, struct p101_error *
         {
             case 'a':    // IP address argument
             {
-                context->arguments->ip_address = optarg;
+                context->arguments->ip_address = context->arguments->argv[optind];
                 break;
             }
             case 'p':    // Port argument
             {
-                context->arguments->port_str = optarg;
+                context->arguments->port_str = context->arguments->argv[optind - 1];
                 break;
             }
             case 'h':    // Help argument
@@ -74,11 +74,6 @@ p101_fsm_state_t parse_arguments(const struct p101_env *env, struct p101_error *
         {
             context->exit_message = p101_strdup(env, err, "Too many arguments.");
         }
-
-        if(next_state != USAGE)
-        {
-            context->arguments->message = context->arguments->argv[optind];
-        }
     }
 
     return next_state;
@@ -86,11 +81,26 @@ p101_fsm_state_t parse_arguments(const struct p101_env *env, struct p101_error *
 
 p101_fsm_state_t check_arguments(const struct p101_env *env, struct p101_error *err, void *arg)
 {
-    P101_TRACE(env);
-    (void)err;
-    (void)arg;
+    p101_fsm_state_t next_state;
+    struct context  *context;
 
-    return PARSE_IN_PORT_T;
+    P101_TRACE(env);
+    context    = arg;
+    next_state = PARSE_IN_PORT_T;
+
+    if(context->arguments->ip_address == NULL)
+    {
+        context->exit_message = p101_strdup(env, err, "<ip_address> must be passed.");
+        next_state            = USAGE;
+    }
+
+    if(context->arguments->port_str == NULL)
+    {
+        context->exit_message = p101_strdup(env, err, "<port> must be passed.");
+        next_state            = USAGE;
+    }
+
+    return next_state;
 }
 
 p101_fsm_state_t parse_in_port_t(const struct p101_env *env, struct p101_error *err, void *arg)
@@ -104,9 +114,21 @@ p101_fsm_state_t parse_in_port_t(const struct p101_env *env, struct p101_error *
 
 p101_fsm_state_t usage(const struct p101_env *env, struct p101_error *err, void *arg)
 {
+    struct context *context;
     P101_TRACE(env);
-    (void)err;
-    (void)arg;
 
+    context = arg;
+
+    if(context->exit_message != NULL)
+    {
+        fprintf(stderr, "%s\n", context->exit_message);
+    }
+
+    fprintf(stderr, "Usage: %s [-h] -a <ip_address> -p <port>\n", context->arguments->program_name);
+    fputs("Options:\n", stderr);
+    fputs("  -h Display this help message\n", stderr);
+    fputs("  -a <ip_address>  Option 'a' (required) with an IP Address.\n", stderr);
+    fputs("  -p <port>        Option 'p' (required) with a port.\n", stderr);
+    free(context->exit_message);
     return P101_FSM_EXIT;
 }

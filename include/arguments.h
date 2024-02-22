@@ -6,6 +6,7 @@
 #include <p101_posix/p101_string.h>
 #include <p101_unix/p101_getopt.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define UNKNOWN_OPTION_MESSAGE_LEN 24
 
