@@ -1,9 +1,11 @@
 #include "../include/arguments.h"
+#include <p101_c/p101_stdlib.h>
+#include <p101_c/p101_string.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void)
+int main(int argc, char *argv[])
 {
     static struct p101_fsm_transition transitions[] = {
         {P101_FSM_INIT,   PARSE_ARGS,      parse_arguments},
@@ -25,6 +27,8 @@ int main(void)
     struct p101_fsm_info *fsm;
     p101_fsm_state_t      from_state;
     p101_fsm_state_t      to_state;
+    struct arguments      arguments;
+    struct context        context;
 
     error = p101_error_create(false);
 
@@ -78,7 +82,13 @@ int main(void)
         p101_fsm_info_set_did_change_state_notifier(fsm, p101_fsm_info_default_did_change_state_notifier);
     }
 
-    p101_fsm_run(fsm, &from_state, &to_state, NULL, transitions, sizeof(transitions));
+    p101_memset(env, &arguments, 0, sizeof(arguments));    // Set memory of arguments to 0
+    p101_memset(env, &context, 0, sizeof(context));        // Set memory of context to 0
+    context.arguments       = &arguments;
+    context.arguments->argc = argc;
+    context.arguments->argv = argv;
+
+    p101_fsm_run(fsm, &from_state, &to_state, &context, transitions, sizeof(transitions));
     p101_fsm_info_destroy(env, &fsm);
     free(fsm_env);
 
@@ -86,10 +96,10 @@ int main(void)
 
 free_fsm_error:
     p101_error_reset(fsm_error);
-    free(fsm_error);
+    p101_free(env, fsm_error);
 
 free_env:
-    free(env);
+    p101_free(env, env);
 
 free_error:
     p101_error_reset(error);
@@ -98,3 +108,22 @@ free_error:
 done:
     return ret_val;
 }
+
+/*
+ * Parent Process
+ *      | // fork here before setting up server
+ *      |
+ *      |
+ * Process Manager
+ *      |
+ *      |
+ * Child processes
+ *
+ * use domain sockets to transfer fds from one process to another, d'arcy might be lying ):
+ * create the domain socket, then fork (check out socket pair example)
+ *
+ * call socketpair()
+ * then call fork() // child process has access to the other side of the socketpair
+ * from that child process call fork()
+ *
+ */

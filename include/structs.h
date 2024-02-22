@@ -7,9 +7,10 @@ struct arguments
 {
     int         argc;
     const char *program_name;
+    const char *message;
     const char *ip_address;
     const char *port_str;
-    char       *argv[];
+    char      **argv;
 };
 
 struct settings
