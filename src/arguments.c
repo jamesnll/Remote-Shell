@@ -14,18 +14,20 @@ void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg)
     context->arguments->program_name = context->arguments->argv[0];
     opterr                           = 0;
 
-    while((opt = getopt(context->arguments->argc, context->arguments->argv, "hap:")) != -1)
+    while((opt = getopt(context->arguments->argc, context->arguments->argv, "ha:p:")) != -1)
     {
         switch(opt)
         {
             case 'a':    // IP address argument
             {
-                context->arguments->ip_address = context->arguments->argv[optind];
+                printf("-a: %s\n", optarg);
+                context->arguments->ip_address = optarg;
                 break;
             }
             case 'p':    // Port argument
             {
-                context->arguments->port_str = context->arguments->argv[optind - 1];
+                printf("-p: %s\n", optarg);
+                context->arguments->port_str = optarg;
                 break;
             }
             case 'h':    // Help argument
@@ -34,24 +36,11 @@ void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg)
             }
             case '?':
             {
-                if(optopt == 'a')    // Passed -a without any argument
-                {
-                    context->exit_message = p101_strdup(env, err, "Option '-a' requires a value.");
-                    goto usage;
-                }
-                else if(optopt == 'p')    // Passed -p without any argument
-                {
-                    context->exit_message = p101_strdup(env, err, "Option '-p' requires a value.");
-                    goto usage;
-                }
-                else
-                {
-                    char message[UNKNOWN_OPTION_MESSAGE_LEN];
+                char message[UNKNOWN_OPTION_MESSAGE_LEN];
 
-                    snprintf(message, sizeof(message), "Unknown option '-%c'.", optopt);
-                    context->exit_message = p101_strdup(env, err, message);
-                    goto usage;
-                }
+                snprintf(message, sizeof(message), "Unknown option '-%c'.", optopt);
+                context->exit_message = p101_strdup(env, err, message);
+                goto usage;
             }
             default:
             {
@@ -60,13 +49,8 @@ void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg)
             }
         }
     }
-    if(optind >= context->arguments->argc)
-    {
-        context->exit_message = p101_strdup(env, err, "The message path is required");
-        goto usage;
-    }
 
-    if(optind < context->arguments->argc - 1)
+    if(optind > REQUIRED_ARGS_NUM)
     {
         context->exit_message = p101_strdup(env, err, "Too many arguments.");
         goto usage;
@@ -78,29 +62,31 @@ usage:
     usage(env, err, context);
 }
 
-// p101_fsm_state_t check_arguments(const struct p101_env *env, struct p101_error *err, void *arg)
-//{
-//     p101_fsm_state_t next_state;
-//     struct context  *context;
-//
-//     P101_TRACE(env);
-//     context    = arg;
-//     next_state = PARSE_IN_PORT_T;
-//
-//     if(context->arguments->ip_address == NULL)
-//     {
-//         context->exit_message = p101_strdup(env, err, "<ip_address> must be passed.");
-//         next_state            = USAGE;
-//     }
-//
-//     if(context->arguments->port_str == NULL)
-//     {
-//         context->exit_message = p101_strdup(env, err, "<port> must be passed.");
-//         next_state            = USAGE;
-//     }
-//
-//     return next_state;
-// }
+void check_arguments(struct p101_env *env, struct p101_error *err, void *arg)
+{
+    struct context *context;
+
+    P101_TRACE(env);
+    context = (struct context *)arg;
+
+    if(context->arguments->ip_address == NULL)
+    {
+        context->exit_message = p101_strdup(env, err, "<ip_address> must be passed.");
+        goto usage;
+    }
+
+    if(context->arguments->port_str == NULL)
+    {
+        context->exit_message = p101_strdup(env, err, "<port> must be passed.");
+        goto usage;
+    }
+
+    return;
+
+usage:
+    usage(env, err, context);
+}
+
 //
 // p101_fsm_state_t parse_in_port_t(const struct p101_env *env, struct p101_error *err, void *arg)
 //{
@@ -144,5 +130,6 @@ _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
     free(env);
     p101_error_reset(err);
     free(err);
+    printf("Exit code: %d\n", context->exit_code);
     exit(context->exit_code);
 }

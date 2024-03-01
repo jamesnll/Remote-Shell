@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     context.arguments->argv = argv;
 
     parse_arguments(env, error, &context);
+    check_arguments(env, error, &context);
 
     ret_val = EXIT_SUCCESS;
     free(context.exit_message);
@@ -44,7 +45,7 @@ free_error:
     free(error);
 
 done:
-    printf("Exit value: %d\n", ret_val);
+    printf("Exit code: %d\n", ret_val);
     return ret_val;
 }
 

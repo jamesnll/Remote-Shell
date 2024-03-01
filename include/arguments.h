@@ -10,9 +10,10 @@
 
 #define UNKNOWN_OPTION_MESSAGE_LEN 24
 #define BASE_TEN 10
+#define REQUIRED_ARGS_NUM 5
 
 void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg);
-// p101_fsm_state_t check_arguments(const struct p101_env *env, struct p101_error *err, void *arg);
+void check_arguments(struct p101_env *env, struct p101_error *err, void *arg);
 // p101_fsm_state_t parse_in_port_t(const struct p101_env *env, struct p101_error *err, void *arg);
 _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg);
 
