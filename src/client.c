@@ -1,5 +1,6 @@
 #include "../include/arguments.h"
 #include "../include/network.h"
+#include "../include/signal-handler.h"
 #include <p101_c/p101_string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -59,6 +60,11 @@ int main(int argc, char *argv[])
     {
         ret_val = EXIT_FAILURE;
         goto socket_close;
+    }
+
+    setup_signal_handler();
+    while(!exit_flag)
+    {
     }
 
     ret_val = EXIT_SUCCESS;
