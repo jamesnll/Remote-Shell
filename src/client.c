@@ -1,4 +1,5 @@
 #include "../include/arguments.h"
+#include "../include/network.h"
 #include <p101_c/p101_string.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -47,6 +48,7 @@ int main(int argc, char *argv[])
         ret_val = EXIT_FAILURE;
         goto free_env;
     }
+    socket_create(env, error, &context);
 
     ret_val = EXIT_SUCCESS;
 
