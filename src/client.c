@@ -41,7 +41,12 @@ int main(int argc, char *argv[])
         ret_val = EXIT_FAILURE;
         goto free_env;
     }
-
+    convert_address(env, error, &context);
+    if(p101_error_has_error(error))
+    {
+        ret_val = EXIT_FAILURE;
+        goto free_env;
+    }
 
     ret_val = EXIT_SUCCESS;
 
@@ -50,6 +55,10 @@ free_env:
     free(env);
 
 free_error:
+    if(p101_error_has_error(error))
+    {
+        fprintf(stderr, "Error: %s\n", p101_error_get_message(error));
+    }
     p101_error_reset(error);
     free(error);
 

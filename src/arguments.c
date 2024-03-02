@@ -20,13 +20,11 @@ void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg)
         {
             case 'a':    // IP address argument
             {
-                printf("-a: %s\n", optarg);
                 context->arguments->ip_address = optarg;
                 break;
             }
             case 'p':    // Port argument
             {
-                printf("-p: %s\n", optarg);
                 context->arguments->port_str = optarg;
                 break;
             }
@@ -101,7 +99,7 @@ void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
 
     if(errno != 0)
     {
-        P101_ERROR_RAISE_USER(err, "Error parsing in_port_t", EXIT_FAILURE);
+        P101_ERROR_RAISE_USER(err, "Couldn't parse in_port_t", EXIT_FAILURE);
         goto done;
     }
 
@@ -117,8 +115,6 @@ void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
         goto usage;
     }
 
-    printf("Port num: %ju\n", parsed_value);
-
     context->settings.port = (in_port_t)parsed_value;
     goto done;
 
@@ -127,6 +123,28 @@ usage:
 
 done:
     return;
+}
+
+void convert_address(const struct p101_env *env, struct p101_error *err, void *arg)
+{
+    struct context *context;
+
+    P101_TRACE(env);
+    context = (struct context *)arg;
+    p101_memset(env, &context->settings.addr, 0, sizeof(context->settings.addr));
+
+    if(inet_pton(AF_INET, context->settings.ip_address, &(((struct sockaddr_in *)&context->settings.addr)->sin_addr)) == 1)
+    {
+        context->settings.addr.ss_family = AF_INET;
+    }
+    else if(inet_pton(AF_INET6, context->settings.ip_address, &(((struct sockaddr_in *)&context->settings.addr)->sin_addr)) == 1)
+    {
+        context->settings.addr.ss_family = AF_INET6;
+    }
+    else
+    {
+        P101_ERROR_RAISE_USER(err, "Address is not an IPv4 or an IPv6 address", EXIT_FAILURE);
+    }
 }
 
 _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
