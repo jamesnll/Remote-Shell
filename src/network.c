@@ -86,3 +86,38 @@ void socket_start_listening(const struct p101_env *env, struct p101_error *err, 
     }
     printf("Listening for incoming connections...\n");
 }
+
+int socket_accept_connection(const struct p101_env *env, struct p101_error *err, void *arg, struct client *client)
+{
+    const struct context *context;
+    char                  client_host[NI_MAXHOST];
+    char                  client_service[NI_MAXSERV];
+    int                   client_fd;
+
+    P101_TRACE(env);
+
+    context   = (struct context *)arg;
+    errno     = 0;
+    client_fd = accept(context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
+
+    if(client_fd == -1)
+    {
+        if(errno != EINTR)
+        {
+            P101_ERROR_RAISE_USER(err, "Accept failed", EXIT_FAILURE);
+        }
+
+        return -1;
+    }
+
+    if(getnameinfo((struct sockaddr *)&client->addr, client->addr_len, client_host, NI_MAXHOST, client_service, NI_MAXSERV, 0) == 0)
+    {
+        printf("Accepted a new connection from %s:%s\n", client_host, client_service);
+    }
+    else
+    {
+        printf("Unable to get client information\n");
+    }
+
+    return client_fd;
+}

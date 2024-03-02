@@ -74,9 +74,28 @@ int main(int argc, char *argv[])
         ret_val = EXIT_FAILURE;
         goto free_env;
     }
+
     setup_signal_handler();
     while(!exit_flag)
     {
+        struct client *client = malloc(sizeof(struct client));
+        if(client == NULL)
+        {
+            continue;
+        }
+        client->addr_len = sizeof(client->addr);
+        client->sockfd   = socket_accept_connection(env, error, &context, client);
+
+        if(client->sockfd == -1)
+        {
+            if(exit_flag)
+            {
+                free(client);
+                break;
+            }
+
+            continue;
+        }
     }
 
     ret_val = EXIT_SUCCESS;
