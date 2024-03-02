@@ -96,6 +96,9 @@ int main(int argc, char *argv[])
 
             continue;
         }
+
+        close(client->sockfd);
+        free(client);
     }
 
     ret_val = EXIT_SUCCESS;
