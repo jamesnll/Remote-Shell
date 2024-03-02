@@ -81,34 +81,51 @@ void check_arguments(struct p101_env *env, struct p101_error *err, void *arg)
         goto usage;
     }
 
+        context->settings.ip_address = context->arguments->ip_address;
     return;
 
 usage:
     usage(env, err, context);
 }
 
-//
-// p101_fsm_state_t parse_in_port_t(const struct p101_env *env, struct p101_error *err, void *arg)
-//{
-//     char            *endptr;
-//     p101_fsm_state_t next_state;
-//     struct context  *context;
-//     uintmax_t        parsed_value;
-//
-//     P101_TRACE(env);
-//     context = arg;
-//     next_state =
-//
-//         errno    = 0;
-//     parsed_value = strtoumax(context->arguments->port_str, &endptr, BASE_TEN);
-//
-//     if(void)
-//         err;
-//     (void)arg;
-//
-//     return P101_FSM_EXIT;
-// }
-//
+void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
+{
+    char           *endptr;
+    struct context *context;
+    uintmax_t       parsed_value;
+
+    P101_TRACE(env);
+    context = (struct context *)arg;
+    errno   = 0;
+    parsed_value = strtoumax(context->arguments->port_str, &endptr, BASE_TEN);
+
+    if(errno != 0)
+    {
+        context->exit_message = p101_strdup(env, err, "Error parsing in_port_t.");
+        goto usage;
+    }
+
+    if(*endptr != '\0')
+    {
+        context->exit_message = p101_strdup(env, err, "Invalid characters in input.");
+        goto usage;
+    }
+
+    if(parsed_value > UINT16_MAX)
+    {
+        context->exit_message = p101_strdup(env, err, "in_port_t value out of range.");
+        goto usage;
+    }
+
+    printf("Port num: %ju\n", parsed_value);
+
+    context->settings.port = (in_port_t)parsed_value;
+    return;
+
+usage:
+    usage(env, err, context);
+}
+
 _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
 {
     struct context *context;

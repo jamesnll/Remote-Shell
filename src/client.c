@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 
     parse_arguments(env, error, &context);
     check_arguments(env, error, &context);
+    parse_in_port_t(env, error, &context);
 
     ret_val = EXIT_SUCCESS;
     free(context.exit_message);
