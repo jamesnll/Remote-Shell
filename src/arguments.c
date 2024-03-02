@@ -81,7 +81,7 @@ void check_arguments(struct p101_env *env, struct p101_error *err, void *arg)
         goto usage;
     }
 
-        context->settings.ip_address = context->arguments->ip_address;
+    context->settings.ip_address = context->arguments->ip_address;
     return;
 
 usage:
@@ -95,14 +95,14 @@ void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
     uintmax_t       parsed_value;
 
     P101_TRACE(env);
-    context = (struct context *)arg;
-    errno   = 0;
+    context      = (struct context *)arg;
+    errno        = 0;
     parsed_value = strtoumax(context->arguments->port_str, &endptr, BASE_TEN);
 
     if(errno != 0)
     {
-        context->exit_message = p101_strdup(env, err, "Error parsing in_port_t.");
-        goto usage;
+        P101_ERROR_RAISE_USER(err, "Error parsing in_port_t", EXIT_FAILURE);
+        goto done;
     }
 
     if(*endptr != '\0')
@@ -120,18 +120,22 @@ void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
     printf("Port num: %ju\n", parsed_value);
 
     context->settings.port = (in_port_t)parsed_value;
-    return;
+    goto done;
 
 usage:
     usage(env, err, context);
+
+done:
+    return;
 }
 
 _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
 {
     struct context *context;
-    P101_TRACE(env);
 
-    context = (struct context *)arg;
+    P101_TRACE(env);
+    context            = (struct context *)arg;
+    context->exit_code = EXIT_FAILURE;
 
     if(context->exit_message != NULL)
     {
@@ -143,10 +147,12 @@ _Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
     fputs("  -h Display this help message\n", stderr);
     fputs("  -a <ip_address>  Option 'a' (required) with an IP Address.\n", stderr);
     fputs("  -p <port>        Option 'p' (required) with a port.\n", stderr);
+
     free(context->exit_message);
     free(env);
     p101_error_reset(err);
     free(err);
+
     printf("Exit code: %d\n", context->exit_code);
     exit(context->exit_code);
 }

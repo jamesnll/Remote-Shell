@@ -36,8 +36,16 @@ int main(int argc, char *argv[])
     parse_arguments(env, error, &context);
     check_arguments(env, error, &context);
     parse_in_port_t(env, error, &context);
+    if(p101_error_has_error(error))
+    {
+        ret_val = EXIT_FAILURE;
+        goto free_env;
+    }
+
 
     ret_val = EXIT_SUCCESS;
+
+free_env:
     free(context.exit_message);
     free(env);
 
