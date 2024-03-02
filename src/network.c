@@ -69,3 +69,20 @@ void socket_bind(const struct p101_env *env, struct p101_error *err, void *arg)
 done:
     return;
 }
+
+void socket_start_listening(const struct p101_env *env, struct p101_error *err, void *arg)
+{
+    const struct context *context;
+    const int             backlog = 4096;
+
+    P101_TRACE(env);
+    context = (struct context *)arg;
+
+    if(listen(context->settings.sockfd, backlog) == -1)
+    {
+        close(context->settings.sockfd);
+        P101_ERROR_RAISE_USER(err, "Listen failed", EXIT_FAILURE);
+        return;
+    }
+    printf("Listening for incoming connections...\n");
+}

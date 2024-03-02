@@ -58,12 +58,17 @@ int main(int argc, char *argv[])
     if(p101_error_has_error(error))
     {
         ret_val = EXIT_FAILURE;
-        goto close_socket;
+        goto free_env;
+    }
+    socket_start_listening(env, error, &context);
+    if(p101_error_has_error(error))
+    {
+        ret_val = EXIT_FAILURE;
+        goto free_env;
     }
 
     ret_val = EXIT_SUCCESS;
-
-close_socket:
+    close(context.settings.sockfd);
 
 free_env:
     free(context.exit_message);
