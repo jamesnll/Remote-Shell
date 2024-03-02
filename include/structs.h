@@ -17,6 +17,7 @@ struct settings
 {
     const char *ip_address;
     in_port_t   port;
+    struct sockaddr_storage addr;
 };
 
 struct context
