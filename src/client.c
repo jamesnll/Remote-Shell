@@ -49,6 +49,11 @@ int main(int argc, char *argv[])
         goto free_env;
     }
     socket_create(env, error, &context);
+    if (p101_error_has_error(error))
+    {
+        ret_val = EXIT_FAILURE;
+        goto free_env;
+    }
 
     ret_val = EXIT_SUCCESS;
 
