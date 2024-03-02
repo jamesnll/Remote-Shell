@@ -29,4 +29,11 @@ struct context
     char             *exit_message;
 };
 
+struct client
+{
+    int                     sockfd;
+    struct sockaddr_storage addr;
+    socklen_t               addr_len;
+};
+
 #endif    // REMOTE_SHELL_STRUCTS_H
