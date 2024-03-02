@@ -16,6 +16,7 @@ struct arguments
 struct settings
 {
     const char             *ip_address;
+    int                     sockfd;
     in_port_t               port;
     struct sockaddr_storage addr;
 };
