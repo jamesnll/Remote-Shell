@@ -220,8 +220,6 @@ void socket_read(const struct p101_env *env, struct p101_error *err, const struc
     P101_TRACE(env);
     size = 0;
 
-    printf("clientsokcfdinread: %d\n", client->sockfd);
-
     while(size == 0)
     {
         read(client->sockfd, &size, sizeof(uint32_t));
@@ -233,25 +231,6 @@ void socket_read(const struct p101_env *env, struct p101_error *err, const struc
         return;
     }
 
-    printf("read into buffer\n");
-
     message_buffer[size] = '\0';
     printf("size: %u word: %s\n", size, message_buffer);
-
-    //    while(read(client->sockfd, &size, sizeof(uint32_t)) >= 0)
-    //    {
-    //        char message_buffer[MESSAGE_LENGTH];
-    //        printf("entered while\n");
-    //
-    //        if(read(client->sockfd, message_buffer, size) == -1)
-    //        {
-    //            P101_ERROR_RAISE_USER(err, "read message failed", EXIT_FAILURE);
-    //            return;
-    //        }
-    //
-    //        printf("read into buffer\n");
-    //
-    //        message_buffer[size] = '\0';
-    //        printf("size: %u word: %s\n", size, message_buffer);
-    //    }
 }
