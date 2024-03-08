@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define INPUT_LENGTH 128
+
 int main(int argc, char *argv[])
 {
     int                ret_val;
@@ -65,6 +67,11 @@ int main(int argc, char *argv[])
     setup_signal_handler();
     while(!exit_flag)
     {
+        char input_buffer[INPUT_LENGTH];
+
+        fgets(input_buffer, INPUT_LENGTH, stdin);
+        // write to server
+        socket_write(env, error, &context, input_buffer);
     }
 
     ret_val = EXIT_SUCCESS;

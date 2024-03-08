@@ -72,11 +72,12 @@ int main(int argc, char *argv[])
     setup_signal_handler();
     while(!exit_flag)
     {
-        struct client *client = malloc(sizeof(struct client));
+        struct client *client = (struct client *)malloc(sizeof(struct client));
         if(client == NULL)
         {
             continue;
         }
+
         client->addr_len = sizeof(client->addr);
         client->sockfd   = socket_accept_connection(env, error, &context, client);
 
@@ -89,6 +90,14 @@ int main(int argc, char *argv[])
             }
 
             continue;
+        }
+
+        socket_read(env, error, client);
+        if(p101_error_has_error(error))
+        {
+            ret_val = EXIT_FAILURE;
+            free(client);
+            goto free_env;
         }
 
         close(client->sockfd);

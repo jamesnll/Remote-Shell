@@ -78,10 +78,11 @@ void socket_start_listening(const struct p101_env *env, struct p101_error *err, 
     P101_TRACE(env);
     context = (struct context *)arg;
 
-    if(listen(context->settings.sockfd, backlog) == -1)
+    p101_listen(env, err, context->settings.sockfd, backlog);
+
+    if(p101_error_has_error(err))
     {
         close(context->settings.sockfd);
-        P101_ERROR_RAISE_USER(err, "Listen failed", EXIT_FAILURE);
         return;
     }
     printf("Listening for incoming connections...\n");
@@ -98,7 +99,14 @@ int socket_accept_connection(const struct p101_env *env, struct p101_error *err,
 
     context   = (struct context *)arg;
     errno     = 0;
-    client_fd = accept(context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
+    client_fd = p101_accept(env, err, context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
+    if(p101_error_has_error(err))
+    {
+        close(context->settings.sockfd);
+        return -1;
+    }
+
+    //    client_fd = accept(context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
 
     if(client_fd == -1)
     {
@@ -107,7 +115,7 @@ int socket_accept_connection(const struct p101_env *env, struct p101_error *err,
             P101_ERROR_RAISE_USER(err, "Accept failed", EXIT_FAILURE);
         }
 
-        return -1;
+        return client_fd;
     }
 
     if(getnameinfo((struct sockaddr *)&client->addr, client->addr_len, client_host, NI_MAXHOST, client_service, NI_MAXSERV, 0) == 0)
@@ -174,4 +182,76 @@ void socket_connect(const struct p101_env *env, struct p101_error *err, void *ar
     }
 
     printf("Connected to: %s:%u\n", addr_str, context->settings.port);
+}
+
+void socket_write(const struct p101_env *env, struct p101_error *err, void *arg, const char *message)
+{
+    const struct context *context;
+    size_t                message_len;
+    uint32_t              size;
+
+    P101_TRACE(env);
+    context     = (struct context *)arg;
+    message_len = strlen(message);
+    size        = (uint32_t)message_len;
+
+    if(write(context->settings.sockfd, &size, sizeof(uint32_t)) == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "write size failed", EXIT_FAILURE);
+        return;
+    }
+
+    printf("Wrote size: %u\n", size);
+
+    if(write(context->settings.sockfd, message, message_len) == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "write message failed", EXIT_FAILURE);
+        return;
+    }
+
+    printf("Wrote message: %s\n", message);
+}
+
+void socket_read(const struct p101_env *env, struct p101_error *err, const struct client *client)
+{
+    uint32_t size;
+    char     message_buffer[MESSAGE_LENGTH];
+
+    P101_TRACE(env);
+    size = 0;
+
+    printf("clientsokcfdinread: %d\n", client->sockfd);
+
+    while(size == 0)
+    {
+        read(client->sockfd, &size, sizeof(uint32_t));
+    }
+
+    if(read(client->sockfd, message_buffer, size) == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "read message failed", EXIT_FAILURE);
+        return;
+    }
+
+    printf("read into buffer\n");
+
+    message_buffer[size] = '\0';
+    printf("size: %u word: %s\n", size, message_buffer);
+
+    //    while(read(client->sockfd, &size, sizeof(uint32_t)) >= 0)
+    //    {
+    //        char message_buffer[MESSAGE_LENGTH];
+    //        printf("entered while\n");
+    //
+    //        if(read(client->sockfd, message_buffer, size) == -1)
+    //        {
+    //            P101_ERROR_RAISE_USER(err, "read message failed", EXIT_FAILURE);
+    //            return;
+    //        }
+    //
+    //        printf("read into buffer\n");
+    //
+    //        message_buffer[size] = '\0';
+    //        printf("size: %u word: %s\n", size, message_buffer);
+    //    }
 }
