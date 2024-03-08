@@ -212,10 +212,9 @@ void socket_write(const struct p101_env *env, struct p101_error *err, void *arg,
     printf("Wrote message: %s\n", message);
 }
 
-void socket_read(const struct p101_env *env, struct p101_error *err, const struct client *client)
+void socket_read(const struct p101_env *env, struct p101_error *err, struct client *client)
 {
     uint32_t size;
-    char     message_buffer[MESSAGE_LENGTH];
 
     P101_TRACE(env);
     size = 0;
@@ -225,12 +224,12 @@ void socket_read(const struct p101_env *env, struct p101_error *err, const struc
         read(client->sockfd, &size, sizeof(uint32_t));
     }
 
-    if(read(client->sockfd, message_buffer, size) == -1)
+    if(read(client->sockfd, (char *)client->message_buffer, size) == -1)
     {
         P101_ERROR_RAISE_USER(err, "read message failed", EXIT_FAILURE);
         return;
     }
 
-    message_buffer[size] = '\0';
-    printf("size: %u word: %s\n", size, message_buffer);
+    client->message_buffer[size] = '\0';
+    printf("size: %u word: %s\n", size, client->message_buffer);
 }

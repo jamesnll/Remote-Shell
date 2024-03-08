@@ -3,6 +3,8 @@
 
 #include <netinet/in.h>
 
+#define MESSAGE_LENGTH 128
+
 struct arguments
 {
     int         argc;
@@ -31,6 +33,7 @@ struct context
 
 struct client
 {
+    char                    message_buffer[MESSAGE_LENGTH];
     int                     sockfd;
     struct sockaddr_storage addr;
     socklen_t               addr_len;

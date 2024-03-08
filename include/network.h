@@ -22,6 +22,6 @@ void socket_start_listening(const struct p101_env *env, struct p101_error *err, 
 int  socket_accept_connection(const struct p101_env *env, struct p101_error *err, void *arg, struct client *client);
 void socket_connect(const struct p101_env *env, struct p101_error *err, void *arg);
 void socket_write(const struct p101_env *env, struct p101_error *err, void *arg, const char *message);
-void socket_read(const struct p101_env *env, struct p101_error *err, const struct client *client);
+void socket_read(const struct p101_env *env, struct p101_error *err, struct client *client);
 
 #endif    // REMOTE_SHELL_NETWORK_H
