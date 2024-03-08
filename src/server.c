@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
+
 int main(int argc, char *argv[])
 {
     int                ret_val;
@@ -92,7 +94,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        socket_read(env, error, client);
+        handle_server_connection(env, error, client);
         if(p101_error_has_error(error))
         {
             ret_val = EXIT_FAILURE;
@@ -122,4 +124,18 @@ free_error:
 done:
     printf("Exit code: %d\n", ret_val);
     return ret_val;
+}
+
+void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
+{
+    P101_TRACE(env);
+
+    socket_read(env, err, client);
+    if(p101_error_has_error(err))
+    {
+        goto done;
+    }
+
+done:
+    close(client->sockfd);
 }
