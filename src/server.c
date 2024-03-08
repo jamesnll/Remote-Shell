@@ -102,7 +102,6 @@ int main(int argc, char *argv[])
             goto free_env;
         }
 
-        close(client->sockfd);
         free(client);
     }
 
