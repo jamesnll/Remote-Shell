@@ -17,6 +17,7 @@
 #define MESSAGE_LENGTH 128
 
 void socket_create(const struct p101_env *env, struct p101_error *err, void *arg);
+void socket_setsockopt(const struct p101_env *env, struct p101_error *err, const struct context *context);
 void socket_bind(const struct p101_env *env, struct p101_error *err, void *arg);
 void socket_start_listening(const struct p101_env *env, struct p101_error *err, void *arg);
 int  socket_accept_connection(const struct p101_env *env, struct p101_error *err, void *arg, struct client *client);

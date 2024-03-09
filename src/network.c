@@ -14,6 +14,19 @@ void socket_create(const struct p101_env *env, struct p101_error *err, void *arg
     }
 }
 
+void socket_setsockopt(const struct p101_env *env, struct p101_error *err, const struct context *context)
+{
+    int enable;
+
+    P101_TRACE(env);
+    enable = 1;
+    if(setsockopt(context->settings.sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "setsockopt failed", EXIT_FAILURE);
+        return;
+    }
+}
+
 void socket_bind(const struct p101_env *env, struct p101_error *err, void *arg)
 {
     char            addr_str[INET6_ADDRSTRLEN];

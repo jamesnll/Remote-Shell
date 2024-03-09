@@ -61,6 +61,12 @@ int main(int argc, char *argv[])
         ret_val = EXIT_FAILURE;
         goto free_env;
     }
+    socket_setsockopt(env, error, &context);
+    if(p101_error_has_error(error))
+    {
+        ret_val = EXIT_FAILURE;
+        goto free_env;
+    }
     socket_bind(env, error, &context);
     if(p101_error_has_error(error))
     {
