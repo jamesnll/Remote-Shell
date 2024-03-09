@@ -8,7 +8,8 @@
 #include <string.h>
 
 static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
-static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);    // have another param for args
+static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);
+static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path);
 
 #define ARGS_LIMIT 10
 
@@ -137,6 +138,7 @@ done:
 static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
 {
     char *args[ARGS_LIMIT + 1];
+    char  full_path[MESSAGE_LENGTH];
 
     P101_TRACE(env);
 
@@ -146,6 +148,11 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
         goto done;
     }
     split_input(env, err, client->message_buffer, args);
+    if(p101_error_has_error(err))
+    {
+        goto done;
+    }
+    find_executable(env, err, args[0], full_path);
     if(p101_error_has_error(err))
     {
         goto done;
@@ -182,4 +189,36 @@ static void split_input(const struct p101_env *env, struct p101_error *err, char
     }
 
     args[args_index] = NULL;
+}
+
+static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path)
+{
+    const char  *delimiter;
+    char        *path;
+    const char  *path_token;
+    char        *savePtr;
+    const size_t line_length = 128;
+
+    P101_TRACE(env);
+
+    path = getenv("PATH");
+
+    if(path == NULL)
+    {
+        P101_ERROR_RAISE_USER(err, "path environment variable not found", EXIT_FAILURE);
+        return;
+    }
+
+    delimiter  = ":";
+    path_token = strtok_r(path, delimiter, &savePtr);
+
+    while(path_token != NULL)
+    {
+        snprintf(full_path, line_length, "%s/%s", path_token, command);
+        if(access(full_path, X_OK) == 0)
+        {
+            return;
+        }
+        path_token = strtok_r(NULL, delimiter, &savePtr);
+    }
 }
