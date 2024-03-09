@@ -7,7 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
+static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
+static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);    // have another param for args
+
+#define ARGS_LIMIT 10
 
 int main(int argc, char *argv[])
 {
@@ -125,8 +128,10 @@ done:
     return ret_val;
 }
 
-void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
+static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
 {
+    char *args[ARGS_LIMIT + 1];
+
     P101_TRACE(env);
 
     socket_read(env, err, client);
@@ -134,7 +139,41 @@ void handle_server_connection(const struct p101_env *env, struct p101_error *err
     {
         goto done;
     }
+    split_input(env, err, client->message_buffer, args);
+    if(p101_error_has_error(err))
+    {
+        goto done;
+    }
 
 done:
     close(client->sockfd);
+}
+
+static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[])
+{
+    const char *delimiter;
+    char       *savePtr;
+    char       *token;
+    int         args_index;
+
+    P101_TRACE(env);
+    delimiter  = " ";
+    args_index = 0;
+
+    token = strtok_r(message, delimiter, &savePtr);
+
+    while(token != NULL)
+    {
+        if(args_index >= ARGS_LIMIT)
+        {
+            P101_ERROR_RAISE_USER(err, "exceeded maximum command args", EXIT_FAILURE);
+            return;
+        }
+
+        args[args_index] = token;
+        token            = strtok_r(NULL, delimiter, &savePtr);
+        args_index++;
+    }
+
+    args[args_index] = NULL;
 }
