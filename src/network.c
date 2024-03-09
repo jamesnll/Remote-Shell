@@ -234,7 +234,11 @@ void socket_read(const struct p101_env *env, struct p101_error *err, struct clie
 
     while(size == 0)
     {
-        read(client->sockfd, &size, sizeof(uint32_t));
+        if(read(client->sockfd, &size, sizeof(uint32_t)) == 0)
+        {
+            P101_ERROR_RAISE_USER(err, "connection closed by client", EXIT_FAILURE);
+            return;
+        }
     }
 
     if(read(client->sockfd, (char *)client->message_buffer, size) == -1)
