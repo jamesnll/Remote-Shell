@@ -157,6 +157,7 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
     {
         goto done;
     }
+    args[0] = full_path;
 
 done:
     close(client->sockfd);
