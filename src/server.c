@@ -6,12 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 
 static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
 static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);
 static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path);
+static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[]);
 
 #define ARGS_LIMIT 10
+#define FULL_PATH_LENGTH 256
 
 int main(int argc, char *argv[])
 {
@@ -142,25 +145,28 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
 
     P101_TRACE(env);
 
-    socket_read(env, err, client);
-    if(p101_error_has_error(err))
+    while(socket_read(env, err, client))
     {
-        goto done;
-    }
-    split_input(env, err, client->message_buffer, args);
-    if(p101_error_has_error(err))
-    {
-        goto done;
-    }
-    find_executable(env, err, args[0], full_path);
-    if(p101_error_has_error(err))
-    {
-        goto done;
-    }
-    args[0] = full_path;
-    execv(args[0], args);
+        split_input(env, err, client->message_buffer, args);
+        if(p101_error_has_error(err))
+        {
+            goto done;
+        }
+        find_executable(env, err, args[0], full_path);
+        if(p101_error_has_error(err))
+        {
+            goto done;
+        }
+        args[0] = full_path;
 
+        execute_command(env, err, args);
+        if(p101_error_has_error(err))
+        {
+            goto done;
+        }
+    }
 done:
+    printf("Client disconnected\n");
     close(client->sockfd);
 }
 
@@ -196,7 +202,8 @@ static void split_input(const struct p101_env *env, struct p101_error *err, char
 static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path)
 {
     const char  *delimiter;
-    char        *path;
+    const char  *path;
+    char         path_copy[FULL_PATH_LENGTH];
     const char  *path_token;
     char        *savePtr;
     const size_t line_length = 128;
@@ -211,8 +218,9 @@ static void find_executable(const struct p101_env *env, struct p101_error *err, 
         return;
     }
 
-    delimiter  = ":";
-    path_token = strtok_r(path, delimiter, &savePtr);
+    delimiter = ":";
+    strncpy(path_copy, path, strlen(path));
+    path_token = strtok_r(path_copy, delimiter, &savePtr);
 
     while(path_token != NULL)
     {
@@ -222,5 +230,37 @@ static void find_executable(const struct p101_env *env, struct p101_error *err, 
             return;
         }
         path_token = strtok_r(NULL, delimiter, &savePtr);
+    }
+}
+
+static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[])
+{
+    pid_t pid;
+
+    P101_TRACE(env);
+
+    pid = fork();
+
+    if(pid == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "fork failed", EXIT_FAILURE);
+        return;
+    }
+    if(pid == 0)
+    {
+        if(args != NULL)
+        {
+            execv(args[0], args);
+            exit(EXIT_SUCCESS);
+        }
+    }
+    else if(pid > 0)
+    {
+        int code;
+        waitpid(pid, &code, 0);
+        if(WIFEXITED(code))
+        {
+            printf("Child process exited with status %d\n", WEXITSTATUS(code));
+        }
     }
 }
