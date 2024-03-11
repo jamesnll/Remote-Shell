@@ -225,7 +225,7 @@ void socket_write(const struct p101_env *env, struct p101_error *err, void *arg,
     printf("Wrote message: %s\n", message);
 }
 
-void socket_read(const struct p101_env *env, struct p101_error *err, struct client *client)
+int socket_read(const struct p101_env *env, struct p101_error *err, struct client *client)
 {
     uint32_t size;
 
@@ -234,19 +234,22 @@ void socket_read(const struct p101_env *env, struct p101_error *err, struct clie
 
     while(size == 0)
     {
-        if(read(client->sockfd, &size, sizeof(uint32_t)) == 0)
+        ssize_t bytes_read;
+
+        bytes_read = read(client->sockfd, &size, sizeof(uint32_t));
+        if(bytes_read == 0)
         {
-            P101_ERROR_RAISE_USER(err, "connection closed by client", EXIT_FAILURE);
-            return;
+            return 0;
         }
     }
 
     if(read(client->sockfd, (char *)client->message_buffer, size) == -1)
     {
         P101_ERROR_RAISE_USER(err, "read message failed", EXIT_FAILURE);
-        return;
+        return -1;
     }
 
     client->message_buffer[size - 1] = '\0';    // Remove \n character
     printf("size: %u word: %s\n", size, client->message_buffer);
+    return 1;
 }
