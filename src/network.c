@@ -247,6 +247,6 @@ void socket_read(const struct p101_env *env, struct p101_error *err, struct clie
         return;
     }
 
-    client->message_buffer[size] = '\0';
+    client->message_buffer[size - 1] = '\0';    // Remove \n character
     printf("size: %u word: %s\n", size, client->message_buffer);
 }
