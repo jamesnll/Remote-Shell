@@ -119,8 +119,6 @@ int socket_accept_connection(const struct p101_env *env, struct p101_error *err,
         return -1;
     }
 
-    //    client_fd = accept(context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
-
     if(client_fd == -1)
     {
         if(errno != EINTR)
@@ -239,6 +237,7 @@ int socket_read(const struct p101_env *env, struct p101_error *err, struct clien
         bytes_read = read(client->sockfd, &size, sizeof(uint32_t));
         if(bytes_read == 0)
         {
+            printf("Connection closed, returning 0\n");
             return 0;
         }
     }

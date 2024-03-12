@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void socket_read_from_server(const struct p101_env *env, struct p101_error *err, int sockfd);
+
 #define INPUT_LENGTH 128
 
 int main(int argc, char *argv[])
@@ -72,6 +74,17 @@ int main(int argc, char *argv[])
         fgets(input_buffer, INPUT_LENGTH, stdin);
         // write to server
         socket_write(env, error, &context, input_buffer);
+        if(p101_error_has_error(error))
+        {
+            ret_val = EXIT_FAILURE;
+            goto socket_close;
+        }
+        socket_read_from_server(env, error, context.settings.sockfd);
+        if(p101_error_has_error(error))
+        {
+            ret_val = EXIT_FAILURE;
+            goto socket_close;
+        }
     }
 
     ret_val = EXIT_SUCCESS;
@@ -96,21 +109,24 @@ done:
     return ret_val;
 }
 
-/*
- * Parent Process
- *      | // fork here before setting up server
- *      |
- *      |
- * Process Manager
- *      |
- *      |
- * Child processes
- *
- * use domain sockets to transfer fds from one process to another, d'arcy might be lying ):
- * create the domain socket, then fork (check out socket pair example)
- *
- * call socketpair()
- * then call fork() // child process has access to the other side of the socketpair
- * from that child process call fork()
- *
- */
+static void socket_read_from_server(const struct p101_env *env, struct p101_error *err, int sockfd)
+{
+    ssize_t bytes_read;
+    char    buffer[OUTPUT_LENGTH];
+
+    P101_TRACE(env);
+
+    while((bytes_read = read(sockfd, buffer, sizeof(buffer))) > 0)
+    {
+        if(bytes_read == 1)
+        {
+            break;
+        }
+        if(write(STDOUT_FILENO, buffer, strlen(buffer)) == -1)
+        {
+            P101_ERROR_RAISE_USER(err, "write to console failed", EXIT_FAILURE);
+            return;
+        }
+        memset(buffer, 0, sizeof(buffer));
+    }
+}

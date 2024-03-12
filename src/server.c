@@ -12,6 +12,7 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
 static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);
 static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path);
 static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[]);
+static void redirect_output(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd);
 
 #define ARGS_LIMIT 10
 #define FULL_PATH_LENGTH 256
@@ -142,6 +143,7 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
 {
     char *args[ARGS_LIMIT + 1];
     char  full_path[MESSAGE_LENGTH];
+    int   output_fd;
 
     P101_TRACE(env);
 
@@ -157,13 +159,27 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
         {
             goto done;
         }
-        args[0] = full_path;
+        args[0]   = full_path;
+        output_fd = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 0);
+        redirect_output(env, err, client->sockfd, STDOUT_FILENO);
+        if(p101_error_has_error(err))
+        {
+            p101_error_get_message(err);
+        }
 
         execute_command(env, err, args);
         if(p101_error_has_error(err))
         {
             goto done;
         }
+        redirect_output(env, err, output_fd, STDOUT_FILENO);
+        if(p101_error_has_error(err))
+        {
+            p101_error_get_message(err);
+        }
+        printf("Bytes written %zd\n", write(client->sockfd, "", 1));
+
+        memset(client->message_buffer, 0, sizeof(client->message_buffer));
     }
 done:
     printf("Client disconnected\n");
@@ -244,17 +260,15 @@ static void execute_command(const struct p101_env *env, struct p101_error *err, 
     if(pid == -1)
     {
         P101_ERROR_RAISE_USER(err, "fork failed", EXIT_FAILURE);
-        return;
     }
-    if(pid == 0)
+    else if(pid == 0)
     {
         if(args != NULL)
         {
             execv(args[0], args);
-            exit(EXIT_SUCCESS);
         }
     }
-    else if(pid > 0)
+    else
     {
         int code;
         waitpid(pid, &code, 0);
@@ -262,5 +276,17 @@ static void execute_command(const struct p101_env *env, struct p101_error *err, 
         {
             printf("Child process exited with status %d\n", WEXITSTATUS(code));
         }
+    }
+}
+
+static void redirect_output(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd)
+{
+    P101_TRACE(env);
+
+    if(dup2(old_fd, new_fd) == -1)
+    {
+        P101_ERROR_RAISE_USER(err, "dup2 failed", EXIT_FAILURE);
+        close(old_fd);
+        return;
     }
 }

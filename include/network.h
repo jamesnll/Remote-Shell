@@ -15,6 +15,7 @@
 #include <unistd.h>
 
 #define MESSAGE_LENGTH 128
+#define OUTPUT_LENGTH 1024
 
 void socket_create(const struct p101_env *env, struct p101_error *err, void *arg);
 void socket_setsockopt(const struct p101_env *env, struct p101_error *err, const struct context *context);
