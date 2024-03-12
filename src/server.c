@@ -164,7 +164,7 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
         redirect_output(env, err, client->sockfd, STDOUT_FILENO);
         if(p101_error_has_error(err))
         {
-            p101_error_get_message(err);
+            goto done;
         }
 
         execute_command(env, err, args);
@@ -175,9 +175,9 @@ static void handle_server_connection(const struct p101_env *env, struct p101_err
         redirect_output(env, err, output_fd, STDOUT_FILENO);
         if(p101_error_has_error(err))
         {
-            p101_error_get_message(err);
+            goto done;
         }
-        printf("Bytes written %zd\n", write(client->sockfd, "", 1));
+        write(client->sockfd, "", 1);
 
         memset(client->message_buffer, 0, sizeof(client->message_buffer));
     }
