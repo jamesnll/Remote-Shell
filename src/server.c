@@ -16,9 +16,11 @@ static void redirect_output(const struct p101_env *env, struct p101_error *err, 
 
 #define ARGS_LIMIT 10
 #define FULL_PATH_LENGTH 256
+#define MAX_CONNECTIONS 5
 
 int main(int argc, char *argv[])
 {
+    int                connection_count;
     int                ret_val;
     struct p101_error *error;
     struct p101_env   *env;
@@ -86,37 +88,62 @@ int main(int argc, char *argv[])
     }
 
     setup_signal_handler();
+    connection_count = 0;
     while(!exit_flag)
     {
-        struct client *client = (struct client *)malloc(sizeof(struct client));
-        if(client == NULL)
+        if(connection_count < MAX_CONNECTIONS)
         {
-            continue;
-        }
+            int pid;
+            pid = fork();
 
-        client->addr_len = sizeof(client->addr);
-        client->sockfd   = socket_accept_connection(env, error, &context, client);
-
-        if(client->sockfd == -1)
-        {
-            if(exit_flag)
+            if(pid == -1)
             {
-                free(client);
-                break;
+                perror("fork");
+                exit(EXIT_FAILURE);
             }
+            else if(pid == 0)
+            {
+                struct client *client = (struct client *)malloc(sizeof(struct client));
+                if(client == NULL)
+                {
+                    continue;
+                }
 
-            continue;
+                client->addr_len = sizeof(client->addr);
+                client->sockfd   = socket_accept_connection(env, error, &context, client);
+
+                if(client->sockfd == -1)
+                {
+                    if(exit_flag)
+                    {
+                        free(client);
+                        break;
+                    }
+
+                    continue;
+                }
+
+                handle_server_connection(env, error, client);
+                if(p101_error_has_error(error))
+                {
+                    ret_val = EXIT_FAILURE;
+                    free(client);
+                    goto free_env;
+                }
+
+                free(client);
+            }
+            else
+            {
+                connection_count++;
+            }
         }
-
-        handle_server_connection(env, error, client);
-        if(p101_error_has_error(error))
+        else
         {
-            ret_val = EXIT_FAILURE;
-            free(client);
-            goto free_env;
+            int code;
+            wait(&code);
+            connection_count--;
         }
-
-        free(client);
     }
 
     ret_val = EXIT_SUCCESS;
