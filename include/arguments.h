@@ -9,6 +9,7 @@
 #include <p101_unix/p101_getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 
 #define UNKNOWN_OPTION_MESSAGE_LEN 24
 #define BASE_TEN 10

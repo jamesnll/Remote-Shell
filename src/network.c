@@ -6,7 +6,7 @@ void socket_create(const struct p101_env *env, struct p101_error *err, void *arg
 
     P101_TRACE(env);
     context                  = (struct context *)arg;
-    context->settings.sockfd = socket(context->settings.addr.ss_family, SOCK_STREAM, 0);
+    context->settings.sockfd = socket(context->settings.addr.ss_family, SOCK_STREAM | SOCK_CLOEXEC, 0);
 
     if(context->settings.sockfd == -1)
     {
