@@ -2,6 +2,7 @@
 #include "../include/network.h"
 #include "../include/signal-handler.h"
 #include <p101_c/p101_string.h>
+#include <p101_posix/p101_unistd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -310,7 +311,7 @@ static void redirect_output(const struct p101_env *env, struct p101_error *err, 
 {
     P101_TRACE(env);
 
-    if(dup2(old_fd, new_fd) == -1)
+    if(p101_dup2(env, err, old_fd, new_fd) == -1)
     {
         P101_ERROR_RAISE_USER(err, "dup2 failed", EXIT_FAILURE);
         close(old_fd);
