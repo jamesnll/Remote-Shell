@@ -127,6 +127,12 @@ static void socket_read_from_server(const struct p101_env *env, struct p101_erro
             P101_ERROR_RAISE_USER(err, "write to console failed", EXIT_FAILURE);
             return;
         }
+        if(strstr(buffer, "Child process exited with status") != NULL)
+        {
+            memset(buffer, 0, sizeof(buffer));
+            break;
+        }
+
         memset(buffer, 0, sizeof(buffer));
     }
 }
