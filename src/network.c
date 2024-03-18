@@ -1,11 +1,8 @@
 #include "../include/network.h"
 
-void socket_create(const struct p101_env *env, struct p101_error *err, void *arg)
+void socket_create(const struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    struct context *context;
-
     P101_TRACE(env);
-    context                  = (struct context *)arg;
     context->settings.sockfd = socket(context->settings.addr.ss_family, SOCK_STREAM | SOCK_CLOEXEC, 0);
 
     if(context->settings.sockfd == -1)
@@ -27,16 +24,14 @@ void socket_setsockopt(const struct p101_env *env, struct p101_error *err, const
     }
 }
 
-void socket_bind(const struct p101_env *env, struct p101_error *err, void *arg)
+void socket_bind(const struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    char            addr_str[INET6_ADDRSTRLEN];
-    socklen_t       addr_len;
-    void           *vaddr;
-    in_port_t       net_port;
-    struct context *context;
+    char      addr_str[INET6_ADDRSTRLEN];
+    socklen_t addr_len;
+    void     *vaddr;
+    in_port_t net_port;
 
     P101_TRACE(env);
-    context  = (struct context *)arg;
     net_port = htons(context->settings.port);
 
     if(context->settings.addr.ss_family == AF_INET)
@@ -83,13 +78,11 @@ done:
     return;
 }
 
-void socket_start_listening(const struct p101_env *env, struct p101_error *err, void *arg)
+void socket_start_listening(const struct p101_env *env, struct p101_error *err, const struct context *context)
 {
-    const struct context *context;
-    const int             backlog = 4096;
+    const int backlog = 4096;
 
     P101_TRACE(env);
-    context = (struct context *)arg;
 
     p101_listen(env, err, context->settings.sockfd, backlog);
 
@@ -101,16 +94,14 @@ void socket_start_listening(const struct p101_env *env, struct p101_error *err, 
     printf("Listening for incoming connections...\n");
 }
 
-int socket_accept_connection(const struct p101_env *env, struct p101_error *err, void *arg, struct client *client)
+int socket_accept_connection(const struct p101_env *env, struct p101_error *err, const struct context *context, struct client *client)
 {
-    const struct context *context;
-    char                  client_host[NI_MAXHOST];
-    char                  client_service[NI_MAXSERV];
-    int                   client_fd;
+    char client_host[NI_MAXHOST];
+    char client_service[NI_MAXSERV];
+    int  client_fd;
 
     P101_TRACE(env);
 
-    context   = (struct context *)arg;
     errno     = 0;
     client_fd = p101_accept(env, err, context->settings.sockfd, (struct sockaddr *)&client->addr, &client->addr_len);
     if(p101_error_has_error(err))
@@ -141,17 +132,13 @@ int socket_accept_connection(const struct p101_env *env, struct p101_error *err,
     return client_fd;
 }
 
-void socket_connect(const struct p101_env *env, struct p101_error *err, void *arg)
+void socket_connect(const struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    char            addr_str[INET6_ADDRSTRLEN];
-    in_port_t       net_port;
-    socklen_t       addr_len;
-    struct context *context;
+    char      addr_str[INET6_ADDRSTRLEN];
+    in_port_t net_port;
+    socklen_t addr_len;
 
     P101_TRACE(env);
-
-    context = (struct context *)arg;
-
     if(inet_ntop(context->settings.addr.ss_family,
                  context->settings.addr.ss_family == AF_INET ? (void *)&(((struct sockaddr_in *)&context->settings.addr)->sin_addr) : (void *)&(((struct sockaddr_in6 *)&context->settings.addr)->sin6_addr),
                  addr_str,
@@ -195,14 +182,12 @@ void socket_connect(const struct p101_env *env, struct p101_error *err, void *ar
     printf("Connected to: %s:%u\n", addr_str, context->settings.port);
 }
 
-void socket_write(const struct p101_env *env, struct p101_error *err, void *arg, const char *message)
+void socket_write(const struct p101_env *env, struct p101_error *err, const struct context *context, const char *message)
 {
-    const struct context *context;
-    size_t                message_len;
-    uint32_t              size;
+    size_t   message_len;
+    uint32_t size;
 
     P101_TRACE(env);
-    context     = (struct context *)arg;
     message_len = strlen(message);
     size        = (uint32_t)message_len;
 
