@@ -3,14 +3,11 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-void parse_arguments(struct p101_env *env, struct p101_error *err, void *arg)
+void parse_arguments(struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    int             opt;
-    struct context *context;
+    int opt;
 
     P101_TRACE(env);
-
-    context                          = (struct context *)arg;
     context->arguments->program_name = context->arguments->argv[0];
     opterr                           = 0;
 
@@ -60,12 +57,9 @@ usage:
     usage(env, err, context);
 }
 
-void check_arguments(struct p101_env *env, struct p101_error *err, void *arg)
+void check_arguments(struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    struct context *context;
-
     P101_TRACE(env);
-    context = (struct context *)arg;
 
     if(context->arguments->ip_address == NULL)
     {
@@ -86,14 +80,12 @@ usage:
     usage(env, err, context);
 }
 
-void parse_in_port_t(struct p101_env *env, struct p101_error *err, void *arg)
+void parse_in_port_t(struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    char           *endptr;
-    struct context *context;
-    uintmax_t       parsed_value;
+    char     *endptr;
+    uintmax_t parsed_value;
 
     P101_TRACE(env);
-    context      = (struct context *)arg;
     errno        = 0;
     parsed_value = strtoumax(context->arguments->port_str, &endptr, BASE_TEN);
 
@@ -125,12 +117,9 @@ done:
     return;
 }
 
-void convert_address(const struct p101_env *env, struct p101_error *err, void *arg)
+void convert_address(const struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    struct context *context;
-
     P101_TRACE(env);
-    context = (struct context *)arg;
     p101_memset(env, &context->settings.addr, 0, sizeof(context->settings.addr));
 
     if(inet_pton(AF_INET, context->settings.ip_address, &(((struct sockaddr_in *)&context->settings.addr)->sin_addr)) == 1)
@@ -147,12 +136,9 @@ void convert_address(const struct p101_env *env, struct p101_error *err, void *a
     }
 }
 
-_Noreturn void usage(struct p101_env *env, struct p101_error *err, void *arg)
+_Noreturn void usage(struct p101_env *env, struct p101_error *err, struct context *context)
 {
-    struct context *context;
-
     P101_TRACE(env);
-    context            = (struct context *)arg;
     context->exit_code = EXIT_FAILURE;
 
     if(context->exit_message != NULL)
