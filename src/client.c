@@ -71,6 +71,8 @@ int main(int argc, char *argv[])
     {
         char input_buffer[INPUT_LENGTH];
 
+        memset(input_buffer, 0, INPUT_LENGTH);
+
         fgets(input_buffer, INPUT_LENGTH, stdin);
         // write to server
         socket_write(env, error, &context, input_buffer);

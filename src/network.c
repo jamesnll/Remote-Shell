@@ -139,6 +139,7 @@ void socket_connect(const struct p101_env *env, struct p101_error *err, struct c
     socklen_t addr_len;
 
     P101_TRACE(env);
+
     if(inet_ntop(context->settings.addr.ss_family,
                  context->settings.addr.ss_family == AF_INET ? (void *)&(((struct sockaddr_in *)&context->settings.addr)->sin_addr) : (void *)&(((struct sockaddr_in6 *)&context->settings.addr)->sin6_addr),
                  addr_str,
@@ -188,6 +189,7 @@ void socket_write(const struct p101_env *env, struct p101_error *err, const stru
     uint32_t size;
 
     P101_TRACE(env);
+
     message_len = strlen(message);
     size        = (uint32_t)message_len;
 
@@ -197,15 +199,11 @@ void socket_write(const struct p101_env *env, struct p101_error *err, const stru
         return;
     }
 
-    printf("Wrote size: %u\n", size);
-
     if(write(context->settings.sockfd, message, message_len) == -1)
     {
         P101_ERROR_RAISE_USER(err, "write message failed", EXIT_FAILURE);
         return;
     }
-
-    printf("Wrote message: %s\n", message);
 }
 
 int socket_read(const struct p101_env *env, struct p101_error *err, struct client *client)

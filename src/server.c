@@ -9,11 +9,11 @@
 #include <string.h>
 #include <sys/wait.h>
 
-static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
-static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[]);
+static void handle_connection(const struct p101_env *env, struct p101_error *err, struct client *client);
+static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[], struct redirections *ioRedirections);
 static void find_executable(const struct p101_env *env, struct p101_error *err, const char *command, char *full_path);
-static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[]);
-static void redirect_output(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd);
+static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[], const struct redirections *ioRedirections, int client_sockfd);
+static void redirect_io(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd);
 
 #define ARGS_LIMIT 10
 #define FULL_PATH_LENGTH 256
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
-                handle_server_connection(env, error, client);
+                handle_connection(env, error, client);
                 if(p101_error_has_error(error))
                 {
                     ret_val = EXIT_FAILURE;
@@ -155,66 +155,71 @@ free_env:
     free(env);
 
 free_error:
-    if(p101_error_has_error(error))
-    {
-        fprintf(stderr, "Error: %s\n", p101_error_get_message(error));
-    }
+    //    if(p101_error_has_error(error))
+    //    {
+    //        fprintf(stderr, "Error: %s\n", p101_error_get_message(error));
+    //    }
     p101_error_reset(error);
     free(error);
 
 done:
-    printf("Exit code: %d\n", ret_val);
+    //    printf("Exit code: %d\n", ret_val);
     return ret_val;
 }
 
-static void handle_server_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
+static void handle_connection(const struct p101_env *env, struct p101_error *err, struct client *client)
 {
+    int   output_fd;
     char *args[ARGS_LIMIT + 1];
     char  full_path[MESSAGE_LENGTH];
-    int   output_fd;
 
     P101_TRACE(env);
 
     while(socket_read(env, err, client))
     {
-        split_input(env, err, client->message_buffer, args);
+        struct redirections ioRedirections = {false, false, false, 0};
+        split_input(env, err, client->message_buffer, args, &ioRedirections);
         if(p101_error_has_error(err))
         {
-            goto done;
+            goto error;
         }
         find_executable(env, err, args[0], full_path);
         if(p101_error_has_error(err))
         {
-            goto done;
+            goto error;
         }
         args[0]   = full_path;
         output_fd = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 0);
-        redirect_output(env, err, client->sockfd, STDOUT_FILENO);
+        execute_command(env, err, args, &ioRedirections, client->sockfd);
         if(p101_error_has_error(err))
         {
-            goto done;
+            goto error;
         }
+        // redirect stdout back to stdout
+        redirect_io(env, err, output_fd, STDOUT_FILENO);
 
-        execute_command(env, err, args);
+    error:
         if(p101_error_has_error(err))
         {
-            goto done;
-        }
-        redirect_output(env, err, output_fd, STDOUT_FILENO);
-        if(p101_error_has_error(err))
-        {
-            goto done;
+            write(client->sockfd, p101_error_get_message(err), strlen(p101_error_get_message(err)));
+            //            write(client->sockfd, "", 1);
+            p101_error_reset(err);
         }
         write(client->sockfd, "", 1);
 
         memset(client->message_buffer, 0, sizeof(client->message_buffer));
     }
-done:
+    // done:
     printf("Client disconnected\n");
+    //    if(p101_error_has_error(err))
+    //    {
+    //        write(client->sockfd, p101_error_get_message(err), strlen(p101_error_get_message(err)));
+    //        write(client->sockfd, "", 1);
+    //    }
     close(client->sockfd);
 }
 
-static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[])
+static void split_input(const struct p101_env *env, struct p101_error *err, char *message, char *args[], struct redirections *ioRedirections)
 {
     const char *delimiter;
     char       *savePtr;
@@ -236,7 +241,25 @@ static void split_input(const struct p101_env *env, struct p101_error *err, char
         }
 
         args[args_index] = token;
-        token            = strtok_r(NULL, delimiter, &savePtr);
+        if(strcmp(token, "<") == 0)
+        {
+            ioRedirections->input_redirection = true;
+            ioRedirections->redirection_index = args_index;
+            printf("input is true\n");
+        }
+        else if(strcmp(token, ">") == 0)
+        {
+            ioRedirections->output_redirection = true;
+            ioRedirections->redirection_index  = args_index;
+            printf("truncate is true\n");
+        }
+        else if(strcmp(token, ">>") == 0)
+        {
+            ioRedirections->output_append_redirection = true;
+            ioRedirections->redirection_index         = args_index;
+            printf("append is true\n");
+        }
+        token = strtok_r(NULL, delimiter, &savePtr);
         args_index++;
     }
 
@@ -275,11 +298,14 @@ static void find_executable(const struct p101_env *env, struct p101_error *err, 
         }
         path_token = strtok_r(NULL, delimiter, &savePtr);
     }
+    P101_ERROR_RAISE_USER(err, "bash: command not found...\n", EXIT_FAILURE);
 }
 
-static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[])
+static void execute_command(const struct p101_env *env, struct p101_error *err, char *args[], const struct redirections *ioRedirections, int client_sockfd)
 {
-    pid_t pid;
+    pid_t     pid;
+    int       file_fd;
+    const int file_permissions = 0666;
 
     P101_TRACE(env);
 
@@ -291,6 +317,49 @@ static void execute_command(const struct p101_env *env, struct p101_error *err, 
     }
     else if(pid == 0)
     {
+        // if > or >>, redirect stdout to file
+        if(ioRedirections->output_redirection)
+        {
+            file_fd = open(args[ioRedirections->redirection_index + 1], O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, file_permissions);
+            if(file_fd == -1)
+            {
+                exit(EXIT_FAILURE);
+            }
+            redirect_io(env, err, file_fd, STDOUT_FILENO);
+
+            args[ioRedirections->redirection_index]     = NULL;
+            args[ioRedirections->redirection_index + 1] = NULL;
+        }
+        else if(ioRedirections->output_append_redirection)
+        {
+            file_fd = open(args[ioRedirections->redirection_index + 1], O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, file_permissions);
+            if(file_fd == -1)
+            {
+                exit(EXIT_FAILURE);
+            }
+
+            redirect_io(env, err, file_fd, STDOUT_FILENO);
+
+            args[ioRedirections->redirection_index]     = NULL;
+            args[ioRedirections->redirection_index + 1] = NULL;
+        }
+        else if(ioRedirections->input_redirection)
+        {
+            file_fd = open(args[ioRedirections->redirection_index + 1], O_RDONLY | O_CLOEXEC);
+            if(file_fd == -1)
+            {
+                exit(EXIT_FAILURE);
+            }
+
+            redirect_io(env, err, file_fd, STDIN_FILENO);
+            redirect_io(env, err, client_sockfd, STDOUT_FILENO);
+            args[ioRedirections->redirection_index]     = NULL;
+            args[ioRedirections->redirection_index + 1] = NULL;
+        }
+        else
+        {
+            redirect_io(env, err, client_sockfd, STDOUT_FILENO);
+        }
         if(args != NULL)
         {
             execv(args[0], args);
@@ -298,7 +367,9 @@ static void execute_command(const struct p101_env *env, struct p101_error *err, 
     }
     else
     {
+        // redirect stdout to client
         int code;
+        redirect_io(env, err, client_sockfd, STDOUT_FILENO);
         waitpid(pid, &code, 0);
         if(WIFEXITED(code))
         {
@@ -307,7 +378,7 @@ static void execute_command(const struct p101_env *env, struct p101_error *err, 
     }
 }
 
-static void redirect_output(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd)
+static void redirect_io(const struct p101_env *env, struct p101_error *err, int old_fd, int new_fd)
 {
     P101_TRACE(env);
 

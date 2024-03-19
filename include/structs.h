@@ -2,6 +2,7 @@
 #define REMOTE_SHELL_STRUCTS_H
 
 #include <netinet/in.h>
+#include <stdbool.h>
 
 #define MESSAGE_LENGTH 128
 
@@ -37,6 +38,14 @@ struct client
     int                     sockfd;
     struct sockaddr_storage addr;
     socklen_t               addr_len;
+};
+
+struct redirections
+{
+    bool input_redirection;
+    bool output_redirection;
+    bool output_append_redirection;
+    int  redirection_index;
 };
 
 #endif    // REMOTE_SHELL_STRUCTS_H
