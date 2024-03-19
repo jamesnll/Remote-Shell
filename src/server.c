@@ -294,6 +294,7 @@ static void find_executable(const struct p101_env *env, struct p101_error *err, 
         snprintf(full_path, line_length, "%s/%s", path_token, command);
         if(access(full_path, X_OK) == 0)
         {
+            printf("Executable path: %s\n", full_path);
             return;
         }
         path_token = strtok_r(NULL, delimiter, &savePtr);
